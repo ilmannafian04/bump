@@ -1,0 +1,24 @@
+name: deploy
+on:
+  push:
+    tags:
+      - v*.*.*
+
+jobs:
+  build:
+    uses: ilmannafian04/dot-github/.github/workflows/docker.yml@v0.2.3
+    with:
+      username: ilmannafian
+      repository: ilmannafian
+      app-name: bump
+    secrets:
+      docker-hub-access-token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+  deploy:
+    needs: build
+    uses: ilmannafian04/dot-github/.github/workflows/nomad.yml@v0.2.3
+    with:
+      address: https://nomad.ilmannfn.com
+      job-file: nomad.hcl
+    secrets:
+      token: ${{ secrets.NOMAD_TOKEN }}
+      variables: ""
