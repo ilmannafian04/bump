@@ -1,4 +1,4 @@
-variables "version" {
+variable "version" {
   type = string
 }
 
