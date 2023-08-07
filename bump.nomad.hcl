@@ -3,7 +3,7 @@ variable "version" {
 }
 
 job "bump" {
-  datacenters = ["ln-sg"]
+  datacenters = ["sg-ln"]
 
   group "bump" {
     network {
@@ -15,7 +15,7 @@ job "bump" {
       port = "http"
       tags = [
         "traefik.enable=true",
-        "traefik.http.routers.bump.rule=Host(`bump.ilmannfn.com`)",
+        "traefik.http.routers.bump.rule=Host(`bump.ilman.io`)",
         "traefik.http.routers.bump.entrypoints=websecure",
         "traefik.http.routers.bump.tls=true",
         "traefik.http.routers.bump.tls.certResolver=cloudflareResolver",

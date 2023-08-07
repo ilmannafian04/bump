@@ -17,8 +17,8 @@ jobs:
     needs: build
     uses: ilmannafian04/dot-github/.github/workflows/nomad.yml@v0.2.3
     with:
-      address: https://nomad.ilmannfn.com
-      job-file: nomad.hcl
+      address: https://nomad.ilman.dev
+      job-file: bump.nomad.hcl
     secrets:
       token: ${{ secrets.NOMAD_TOKEN }}
       variables: ""
