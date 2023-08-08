@@ -1,6 +1,9 @@
-mod configs;
+mod config;
+mod error;
 mod handlers;
-mod routes;
+mod route;
+mod services;
+mod stores;
 
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
@@ -21,13 +24,13 @@ async fn main() -> std::io::Result<()> {
     );
 
     info!("building configuration");
-    let app_config = configs::AppConfig::new();
+    let app_config = config::AppConfig::new();
 
     info!(
         "binding http server to {}:{}",
         &app_config.host, &app_config.port
     );
-    HttpServer::new(|| App::new().configure(routes::configuration))
+    HttpServer::new(|| App::new().configure(route::configuration))
         .bind((app_config.host, app_config.port))?
         .run()
         .await

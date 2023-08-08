@@ -1,2 +1,6 @@
 target
 .env
+
+ui/.svelte-kit
+ui/node_modules
+ui/build
