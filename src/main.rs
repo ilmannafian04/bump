@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
     info!("spawning tasks");
     let config_clone = app_config.clone();
     actix_rt::spawn(async move { worker::run(&config_clone).await });
-    let api_handle = actix_rt::spawn(async move { api::run(&app_config).await });
-
-    api_handle.await.expect("failed to spawn api")
+    actix_rt::spawn(async move { api::run(&app_config).await })
+        .await
+        .expect("failed spawning api")
 }
