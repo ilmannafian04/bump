@@ -28,8 +28,10 @@ async fn main() -> std::io::Result<()> {
     let app_config = config::AppConfig::new();
 
     info!("spawning tasks");
-    let worker_handle = actix_rt::spawn(async move { worker::run().await });
-    let api_handle = actix_rt::spawn(async move { api::run(&app_config).await });
+    let config_clone = app_config.clone();
+    let worker_handle = actix_rt::spawn(async move { worker::run(&config_clone).await });
+    let config_clone = app_config.clone();
+    let api_handle = actix_rt::spawn(async move { api::run(&config_clone).await });
 
     worker_handle.await.expect("failed to spawn worker");
     api_handle.await.expect("failed to spawn api")
