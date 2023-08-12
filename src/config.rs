@@ -7,6 +7,9 @@ use crate::cli;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AppConfig {
+    #[serde(default = "default_log_level", alias = "LOG_LEVEL")]
+    pub log_level: String,
+
     #[serde(default = "default_host", alias = "API_HOST")]
     pub api_host: String,
     #[serde(default = "default_port", alias = "API_PORT")]
@@ -27,6 +30,9 @@ impl AppConfig {
     }
 
     pub fn merge(&mut self, right: AppConfig) {
+        if right.log_level != default_log_level() {
+            self.log_level = right.log_level
+        }
         if right.api_host != default_host() {
             self.api_host = right.api_host
         }
@@ -76,6 +82,7 @@ macro_rules! config_default {
         }
     };
 }
+config_default!(log_level, String, "info".to_owned());
 config_default!(host, String, "127.0.0.1".to_owned());
 config_default!(port, u16, 8080);
 config_default!(worker_interval, u32, 60);
@@ -83,6 +90,7 @@ config_default!(worker_interval, u32, 60);
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
+            log_level: default_log_level(),
             api_host: default_host(),
             api_port: default_port(),
             worker_interval: default_worker_interval(),

@@ -8,9 +8,10 @@ mod services;
 mod stores;
 mod worker;
 
+use std::env;
+
 use clap::Parser;
 use dotenv::dotenv;
-use env_logger::Env;
 use log::{debug, info};
 
 #[actix_web::main]
@@ -18,19 +19,21 @@ async fn main() -> std::io::Result<()> {
     if cfg!(debug_assertions) {
         dotenv().ok();
     };
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
 
     let args = cli::Args::parse();
-    debug!("args dump: {:?}", &args);
+    let app_config = config::AppConfig::new(&args);
+
+    if env::var("RUST_LOG").is_err() || app_config.log_level != env::var("RUST_LOG").unwrap() {
+        env::set_var("RUST_LOG", &app_config.log_level);
+        env_logger::init();
+    };
 
     info!(
         "starting {} v{}",
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_VERSION")
     );
-
-    info!("building configuration");
-    let app_config = config::AppConfig::new(&args);
+    debug!("args dump: {:?}", &args);
     debug!("config dump: {:?}", &app_config);
 
     info!("spawning tasks");
