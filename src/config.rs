@@ -5,10 +5,10 @@ use serde::Deserialize;
 
 #[derive(Clone, Deserialize)]
 pub struct AppConfig {
-    #[serde(default = "default_host", alias = "HOST")]
-    pub host: String,
-    #[serde(default = "default_port", alias = "PORT")]
-    pub port: u16,
+    #[serde(default = "default_host", alias = "API_HOST")]
+    pub api_host: String,
+    #[serde(default = "default_port", alias = "API_PORT")]
+    pub api_port: u16,
 
     #[serde(default = "default_worker_interval", alias = "WORKER_INTERVAL")]
     pub worker_interval: u32,
