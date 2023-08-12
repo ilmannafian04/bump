@@ -1,11 +1,12 @@
+mod api;
 mod config;
 mod error;
 mod handlers;
 mod route;
 mod services;
 mod stores;
+mod worker;
 
-use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use env_logger::Env;
 use log::info;
@@ -26,12 +27,10 @@ async fn main() -> std::io::Result<()> {
     info!("building configuration");
     let app_config = config::AppConfig::new();
 
-    info!(
-        "binding http server to {}:{}",
-        &app_config.host, &app_config.port
-    );
-    HttpServer::new(|| App::new().configure(route::configuration))
-        .bind((app_config.host, app_config.port))?
-        .run()
-        .await
+    info!("spawning tasks");
+    let worker_handle = actix_rt::spawn(async move { worker::run().await });
+    let api_handle = actix_rt::spawn(async move { api::run(&app_config).await });
+
+    worker_handle.await.expect("failed to spawn worker");
+    api_handle.await.expect("failed to spawn api")
 }
