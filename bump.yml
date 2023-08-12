@@ -1,6 +1,8 @@
 log_level: debug
 
-api_host: 127.0.0.1
-api_port: 8080
+api:
+  host: "127.0.0.1"
+  port: 8000
 
-worker_interval: 2
+worker:
+  interval: 5

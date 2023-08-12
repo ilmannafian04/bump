@@ -1,22 +1,25 @@
-use std::{fs::File, process::exit};
+use std::fs::File;
 
-use log::error;
 use serde::Deserialize;
 
 use crate::cli;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct AppConfig {
-    #[serde(default = "default_log_level", alias = "LOG_LEVEL")]
     pub log_level: String,
+    pub api: ApiConfig,
+    pub worker: WorkerConfig,
+}
 
-    #[serde(default = "default_api_host", alias = "API_HOST")]
-    pub api_host: String,
-    #[serde(default = "default_api_port", alias = "API_PORT")]
-    pub api_port: u16,
+#[derive(Clone, Debug)]
+pub struct ApiConfig {
+    pub host: String,
+    pub port: u16,
+}
 
-    #[serde(default = "default_worker_interval", alias = "WORKER_INTERVAL")]
-    pub worker_interval: u32,
+#[derive(Clone, Debug)]
+pub struct WorkerConfig {
+    pub interval: u32,
 }
 
 impl AppConfig {
@@ -29,74 +32,127 @@ impl AppConfig {
         app_config
     }
 
-    pub fn merge(&mut self, right: AppConfig) {
-        macro_rules! merge_field {
-            ($name:ident) => {
-                paste::item! {
-                    if right.$name != [< default_ $name >]() {
-                        self.$name = right.$name
-                    }
-                }
-            };
-        }
-
-        merge_field!(log_level);
-
-        merge_field!(api_host);
-        merge_field!(api_port);
-
-        merge_field!(worker_interval);
-    }
-
-    fn from_yml(path: &str) -> Self {
+    fn from_yml(path: &str) -> RawAppConfig {
         let reader = match File::open(path) {
             Ok(reader) => reader,
-            Err(e) => {
-                error!("failed to open config file: {}", e);
-                exit(1)
-            }
+            Err(e) => panic!("failed to open config file: {}", e),
         };
-        match serde_yaml::from_reader::<File, AppConfig>(reader) {
+        match serde_yaml::from_reader::<File, RawAppConfig>(reader) {
             Ok(app_config) => app_config,
-            Err(e) => {
-                error!("failed to read config file: {}", e);
-                exit(1)
-            }
+            Err(e) => panic!("failed to read config file: {}", e),
         }
     }
 
-    fn from_env() -> Self {
-        match envy::from_env::<AppConfig>() {
+    fn from_env() -> RawAppConfig {
+        let mut raw_app_config = match envy::from_env::<RawAppConfig>() {
             Ok(config) => config,
-            Err(err) => {
-                error!("failed to build config from env: {}", err);
-                exit(1)
-            }
-        }
+            Err(err) => panic!("failed to build config from env: {}", err),
+        };
+
+        let raw_api_config = match envy::from_env::<RawApiConfig>() {
+            Ok(config) => config,
+            Err(err) => panic!("failed to build config from env: {}", err),
+        };
+
+        let raw_worker_config = match envy::from_env::<RawWorkerConfig>() {
+            Ok(config) => config,
+            Err(err) => panic!("failed to build config from env: {}", err),
+        };
+
+        raw_app_config.api = raw_api_config;
+        raw_app_config.worker = raw_worker_config;
+
+        raw_app_config
     }
 }
-
-macro_rules! config_default {
-    ($name:ident, $return_type:ty, $return_value:expr) => {
-        paste::item! {
-            fn [< default_ $name >] () -> $return_type {
-                $return_value
-            }
-        }
-    };
-}
-config_default!(log_level, String, "info".to_owned());
-config_default!(api_host, String, "127.0.0.1".to_owned());
-config_default!(api_port, u16, 8080);
-config_default!(worker_interval, u32, 60);
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            log_level: default_log_level(),
-            api_host: default_api_host(),
-            api_port: default_api_port(),
-            worker_interval: default_worker_interval(),
+            log_level: "info".to_owned(),
+            api: ApiConfig::default(),
+            worker: WorkerConfig::default(),
+        }
+    }
+}
+
+impl Default for ApiConfig {
+    fn default() -> Self {
+        Self {
+            host: "127.0.0.1".to_owned(),
+            port: 8080,
+        }
+    }
+}
+
+impl Default for WorkerConfig {
+    fn default() -> Self {
+        Self { interval: 60 }
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct RawAppConfig {
+    #[serde(default, alias = "log_level")]
+    pub log_level: Option<String>,
+
+    #[serde(default)]
+    pub api: RawApiConfig,
+
+    #[serde(default)]
+    pub worker: RawWorkerConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct RawApiConfig {
+    #[serde(default, alias = "api_host")]
+    pub host: Option<String>,
+    #[serde(default, alias = "api_port")]
+    pub port: Option<u16>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct RawWorkerConfig {
+    #[serde(default, alias = "worker_interval")]
+    pub interval: Option<u32>,
+}
+
+trait Merge {
+    type Right;
+    fn merge(&mut self, right: Self::Right);
+}
+
+impl Merge for AppConfig {
+    type Right = RawAppConfig;
+
+    fn merge(&mut self, right: Self::Right) {
+        if let Some(log_level) = right.log_level {
+            self.log_level = log_level
+        }
+        self.api.merge(right.api);
+        self.worker.merge(right.worker);
+    }
+}
+
+impl Merge for ApiConfig {
+    type Right = RawApiConfig;
+
+    fn merge(&mut self, right: Self::Right) {
+        if let Some(host) = right.host {
+            self.host = host
+        }
+        if let Some(port) = right.port {
+            self.port = port
+        }
+    }
+}
+
+impl Merge for WorkerConfig {
+    type Right = RawWorkerConfig;
+
+    fn merge(&mut self, right: Self::Right) {
+        if let Some(interval) = right.interval {
+            self.interval = interval
         }
     }
 }
