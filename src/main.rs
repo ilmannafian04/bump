@@ -25,8 +25,8 @@ async fn main() -> std::io::Result<()> {
 
     if env::var("RUST_LOG").is_err() || app_config.log_level != env::var("RUST_LOG").unwrap() {
         env::set_var("RUST_LOG", &app_config.log_level);
-        env_logger::init();
     };
+    env_logger::init();
 
     info!(
         "starting {} v{}",
