@@ -1,4 +1,5 @@
 mod api;
+mod cli;
 mod config;
 mod error;
 mod handlers;
@@ -7,9 +8,10 @@ mod services;
 mod stores;
 mod worker;
 
+use clap::Parser;
 use dotenv::dotenv;
 use env_logger::Env;
-use log::info;
+use log::{debug, info};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -18,6 +20,9 @@ async fn main() -> std::io::Result<()> {
     };
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
+    let args = cli::Args::parse();
+    debug!("args dump: {:?}", &args);
+
     info!(
         "starting {} v{}",
         env!("CARGO_PKG_NAME"),
@@ -25,14 +30,13 @@ async fn main() -> std::io::Result<()> {
     );
 
     info!("building configuration");
-    let app_config = config::AppConfig::new();
+    let app_config = config::AppConfig::new(&args);
+    debug!("config dump: {:?}", &app_config);
 
     info!("spawning tasks");
     let config_clone = app_config.clone();
-    let worker_handle = actix_rt::spawn(async move { worker::run(&config_clone).await });
-    let config_clone = app_config.clone();
-    let api_handle = actix_rt::spawn(async move { api::run(&config_clone).await });
+    actix_rt::spawn(async move { worker::run(&config_clone).await });
+    let api_handle = actix_rt::spawn(async move { api::run(&app_config).await });
 
-    worker_handle.await.expect("failed to spawn worker");
     api_handle.await.expect("failed to spawn api")
 }
